@@ -1,24 +1,21 @@
 package com.BOA.AccountService.Models;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import lombok.Data;
-
-import java.util.List;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
-@Data
+@Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
     private String username;
     private String email;
-
-    @OneToMany(mappedBy = "user")
-    @JsonIgnore  // Prevent accounts from being serialized with User
-    private List<Account> accounts;
 }

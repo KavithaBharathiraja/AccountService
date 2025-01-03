@@ -20,26 +20,36 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long accountId;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
-    @JsonBackReference  // Prevent serialization of the user in the account response
-    private User user;
-
-    @Column(name = "account_number", unique = true, nullable = false, length = 20)
+    @Column(unique = true, nullable = false)
     private String accountNumber;
 
-    @Column(name = "account_type", nullable = false, length = 20)
+    @Column(nullable = false)
     private String accountType;
 
-    @Column(name = "balance", precision = 15, scale = 2, nullable = false)
-    private BigDecimal balance = BigDecimal.ZERO;
+    @Column(nullable = false)
+    private BigDecimal balance;
 
-    @Column(name = "currency", length = 10, nullable = false)
-    private String currency = "USD";
+    @Column(nullable = false)
+    private String currency;
 
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private LocalDateTime updatedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    @JsonBackReference  // Optional, for preventing infinite recursion during JSON serialization
+    private User user;
+
+    @PrePersist
+    public void prePersist() {
+        createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }

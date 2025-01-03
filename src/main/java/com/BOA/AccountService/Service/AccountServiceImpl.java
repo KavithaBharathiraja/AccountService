@@ -1,12 +1,12 @@
 package com.BOA.AccountService.Service;
 
+
 import com.BOA.AccountService.Models.Account;
+import com.BOA.AccountService.Models.User;
 import com.BOA.AccountService.Repositories.AccountRepository;
 import com.BOA.AccountService.Service.Interfaces.AccountService;
-import jakarta.transaction.Transactional;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
@@ -14,69 +14,48 @@ import java.util.List;
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
-    private static final Logger logger = LogManager.getLogger(AccountServiceImpl.class);
+    private final RestTemplate restTemplate;
 
-    public AccountServiceImpl(AccountRepository accountRepository) {
+    private static final String USER_SERVICE_URL = "http://localhost:8081/users/";
+
+    public AccountServiceImpl(AccountRepository accountRepository, RestTemplate restTemplate) {
         this.accountRepository = accountRepository;
+        this.restTemplate = restTemplate;
     }
 
     @Override
-    @Transactional
     public Account createAccount(Account account) {
-        // Log that an account is being created, using account.getUser().getId() to get the userId
-        if (account.getUser() != null && account.getUser().getUserId() != null) {
-            logger.info("Creating a new account for user ID: {}", account.getUser().getUserId());
-        } else {
-            logger.warn("User information is incomplete, cannot log user ID");
+        // Fetch user from the external service
+        User user = restTemplate.getForObject(USER_SERVICE_URL + account.getUser().getUserId(), User.class);
+
+        // Check if user exists, else throw exception
+        if (user == null) {
+            throw new RuntimeException("User with ID " + account.getUser().getUserId() + " not found.");
         }
 
-        // Save the account and return it
+        // Set the user to the account
+        account.setUser(user);
+
+        // Save account to the repository
         return accountRepository.save(account);
     }
 
     @Override
-    @Transactional
     public List<Account> getAllAccounts() {
         return accountRepository.findAll();
     }
 
     @Override
-    @Transactional
-    public Account getAccountById(Long id) {
-        // Retrieve the account and log
-        return accountRepository.findById(id).orElse(null);
+    public Account getAccountById(Long accountId) {
+        return accountRepository.findById(accountId).orElse(null);
     }
 
     @Override
-    @Transactional
-    public Account updateAccount(Account account) {
-        // Check if account exists
-        if (!accountRepository.existsById(account.getAccountId())) {
-            logger.error("Account with ID {} not found for update", account.getAccountId());
-            return null;
+    public boolean deleteAccount(Long accountId) {
+        if (accountRepository.existsById(accountId)) {
+            accountRepository.deleteById(accountId);
+            return true;
         }
-
-        // Log the userId before updating the account
-        // Accessing userId from User entity within Account entity
-        if (account.getUser() != null && account.getUser().getUserId() != null) {
-            logger.info("Creating a new account for user ID: {}", account.getUser().getUserId());
-        } else {
-            logger.warn("User information is incomplete, cannot log user ID");
-        }
-
-        // Update the account and return it
-        return accountRepository.save(account);
-    }
-
-    @Override
-    @Transactional
-    public boolean deleteAccount(Long id) {
-        if (!accountRepository.existsById(id)) {
-            logger.error("Account with ID {} not found for deletion", id);
-            return false;  // Account doesn't exist
-        }
-        accountRepository.deleteById(id);
-        logger.info("Deleted account with ID: {}", id);
-        return true;
+        return false;
     }
 }
